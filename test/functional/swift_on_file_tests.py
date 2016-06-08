@@ -18,6 +18,7 @@
 import os
 import re
 import hashlib
+import time
 from shutil import rmtree
 
 from test.functional.tests import Base, Utils
@@ -205,11 +206,19 @@ class TestSwiftOnFile(Base):
                                  self.env.container.name,
                                  object_name)
         more_data = "- Batman"
+
+        # hpssfs doesn't keep a sub-second access time, so we have to
+        # wait for a second to make sure that we don't trick SwiftOnHPSS
+        # into thinking that nothing changed.
+        time.sleep(1)
+
         with open(file_path, 'a') as f:
             f.write(more_data)
         total_data = data + more_data
         total_data_hash = hashlib.md5(total_data).hexdigest()
         # Make sure GET works
+        print object_item.info()
+        print object_item.read()
         self.assertEqual(total_data, object_item.read())
         self.assert_status(200)
         # Check Etag and content-length is right
@@ -217,6 +226,11 @@ class TestSwiftOnFile(Base):
         self.assert_status(200)
         self.assertEqual(total_data_hash, metadata['etag'])
         self.assertEqual(len(total_data), int(metadata['content_length']))
+
+        # hpssfs doesn't keep a sub-second access time, so we have to
+        # wait for a second to make sure that we don't trick SwiftOnHPSS
+        # into thinking that nothing changed.
+        time.sleep(1)
 
         # Re-write the file to be shorter
         new_data = "I am Batman"
@@ -231,6 +245,11 @@ class TestSwiftOnFile(Base):
         self.assert_status(200)
         self.assertEqual(new_data_hash, metadata['etag'])
         self.assertEqual(len(new_data), int(metadata['content_length']))
+
+        # hpssfs doesn't keep a sub-second access time, so we have to
+        # wait for a second to make sure that we don't trick SwiftOnHPSS
+        # into thinking that nothing changed.
+        time.sleep(1)
 
         # Modify the file but let the length remain same
         new_data = "I am Antman"
